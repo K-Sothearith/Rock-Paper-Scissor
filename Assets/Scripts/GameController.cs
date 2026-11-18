@@ -3,21 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+// The starter TODOs below are kept as slide references and have been completed.
+// Rock - Paper - Scissors : starter script
+// Follow the slides and complete every TODO.
 // Rock - Paper - Scissors : starter script
 // Follow the slides and complete every TODO.
 // 1 = Rock, 2 = Paper, 3 = Scissors, 4 = Unknown ("?")
 public class GameController : MonoBehaviour
 {
-    Image imgYou;       // your selected image (rock, paper, scissor)
-    Image imgCom;       // computer selected image (rock, paper, scissor)
+    private UnityEngine.UI.Image imgYou;  // your selected image (rock, paper, scissor)
+    private UnityEngine.UI.Image imgCom;  // computer selected image (rock, paper, scissor)
+    private UnityEngine.UI.Text txtYou;  // the score you win
+    private UnityEngine.UI.Text txtCom;  // the score computer win
+    private UnityEngine.UI.Text txtResult;  // the result
 
-    Text txtYou;        // the score you win
-    Text txtCom;        // the score computer win
-    Text txtResult;     // the result
-
-    int cntYou = 0;     // number you win
-    int cntCom = 0;     // number computer win
-
+    private int cntYou;  // number you win
+    private int cntCom;  // number computer win
+    private bool initialized;
 
     private void InitGame()
     {
@@ -25,18 +27,33 @@ public class GameController : MonoBehaviour
         // Example:
         // imgYou = GameObject.Find("ImgYou").GetComponent<Image>();
         // Also find: ImgCom, TxtYou, TxtCom, TxtResult_
+        imgYou = GameObject.Find("ImgYou")?.GetComponent<UnityEngine.UI.Image>();
+        imgCom = GameObject.Find("ImgCom")?.GetComponent<UnityEngine.UI.Image>();
+        txtYou = GameObject.Find("TxtYou")?.GetComponent<UnityEngine.UI.Text>();
+        txtCom = GameObject.Find("TxtCom")?.GetComponent<UnityEngine.UI.Text>();
+        txtResult = GameObject.Find("TxtResult_")?.GetComponent<UnityEngine.UI.Text>();
 
-        // TODO: set the text of txtResult to "Select the button below"
+        initialized = imgYou != null && imgCom != null && txtYou != null &&
+                      txtCom != null && txtResult != null;
+        if (!initialized)
+        {
+            Debug.LogError("GameController requires ImgYou and ImgCom with Image components, " +
+                           "and TxtYou, TxtCom and TxtResult_ with Legacy Text components.", this);
+            return;
+        }
+
+        txtResult.text = "Select the button below";
+        SetResult(4, 4);
     }
 
-    void Start()
+    private void Start()
     {
         // init the game
         InitGame();
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
         // exit if press escape key
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -49,14 +66,31 @@ public class GameController : MonoBehaviour
     // Pass the button itself as the GameObject parameter.
     public void OnButtonClick(GameObject buttonObject)
     {
-        Debug.Log(buttonObject.name + " clicked ");
+        if (buttonObject == null)
+        {
+            return;
+        }
 
         // TODO (slide 34): get the number from the first character of the button name
         // int you = int.Parse(buttonObject.name.Substring(0, 1));
         // CheckResult(you);
+        string buttonName = buttonObject.name;
+        Debug.Log(buttonName + " clicked");
+
+        if (buttonName.Length < 2 || buttonName[1] != '_' ||
+            buttonName[0] < '1' || buttonName[0] > '3')
+        {
+            Debug.LogWarning("Choice button names must start with 1_, 2_ or 3_.", buttonObject);
+            return;
+        }
+
+        if (initialized)
+        {
+            CheckResult(buttonName[0] - '0');
+        }
     }
 
-    void CheckResult(int yourResult)
+    private void CheckResult(int yourResult)
     {
         // TODO (slide 33): game logic
         // 1. com = random number 1..3  ->  UnityEngine.Random.Range(1, 4)
@@ -66,14 +100,38 @@ public class GameController : MonoBehaviour
         //    otherwise           -> "Computer win."  (cntCom++)
         // 4. call SetResult(yourResult, comResult)
         Debug.Log("Your result is: " + yourResult);
+
+        int comResult = Random.Range(1, 4);
+        int difference = yourResult - comResult;
+        if (difference == 0)
+        {
+            txtResult.text = "Draw.";
+        }
+        else if (difference == 1 || difference == -2)
+        {
+            txtResult.text = "You win.";
+            cntYou++;
+        }
+        else
+        {
+            txtResult.text = "Computer win.";
+            cntCom++;
+        }
+
+        SetResult(yourResult, comResult);
     }
 
-    void SetResult(int you, int com)
+    private void SetResult(int you, int com)
     {
         // TODO (slide 41):
         // 1. change imgYou.sprite and imgCom.sprite
         //    Resources.Load("img_" + you, typeof(Sprite)) as Sprite
         // 2. flip the computer image on the x axis: localScale = (-1, 1, 1)
         // 3. update txtYou.text and txtCom.text with the scores
+        imgYou.sprite = Resources.Load<Sprite>("img_" + you);
+        imgCom.sprite = Resources.Load<Sprite>("img_" + com);
+        imgCom.rectTransform.localScale = new Vector3(com == 4 ? 1f : -1f, 1f, 1f);
+        txtYou.text = cntYou.ToString();
+        txtCom.text = cntCom.ToString();
     }
 }
