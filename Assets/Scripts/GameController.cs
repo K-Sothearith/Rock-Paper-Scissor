@@ -11,6 +11,12 @@ using UnityEngine.UI;
 // 1 = Rock, 2 = Paper, 3 = Scissors, 4 = Unknown ("?")
 public class GameController : MonoBehaviour
 {
+    [Header("Round Settings")]
+    [SerializeField] private int maxRounds = 5;  // maximum number of rounds
+    private int currentRound;                   // current round number
+    private bool isGameOver;                    // whether the game has ended
+    private Button[] choiceButtons;             // choice buttons to disable when game ends
+
     private UnityEngine.UI.Image imgYou;  // your selected image (rock, paper, scissor)
     private UnityEngine.UI.Image imgCom;  // computer selected image (rock, paper, scissor)
     private UnityEngine.UI.Text txtYou;  // the score you win
@@ -33,6 +39,21 @@ public class GameController : MonoBehaviour
         txtCom = GameObject.Find("TxtCom")?.GetComponent<UnityEngine.UI.Text>();
         txtResult = GameObject.Find("TxtResult_")?.GetComponent<UnityEngine.UI.Text>();
 
+        // Find choice buttons to manage interactivity
+        GameObject choicesObject = GameObject.Find("Choices");
+        if (choicesObject != null)
+        {
+            choiceButtons = choicesObject.GetComponentsInChildren<Button>();
+        }
+        else
+        {
+#if UNITY_2023_1_OR_NEWER
+            choiceButtons = FindObjectsByType<Button>(FindObjectsSortMode.None);
+#else
+            choiceButtons = FindObjectsOfType<Button>();
+#endif
+        }
+
         initialized = imgYou != null && imgCom != null && txtYou != null &&
                       txtCom != null && txtResult != null;
         if (!initialized)
@@ -42,6 +63,12 @@ public class GameController : MonoBehaviour
             return;
         }
 
+        cntYou = 0;
+        cntCom = 0;
+        currentRound = 0;
+        isGameOver = false;
+
+        SetButtonsInteractable(true);
         txtResult.text = "Select the button below";
         SetResult(4, 4);
     }
@@ -60,6 +87,12 @@ public class GameController : MonoBehaviour
         {
             Application.Quit();
         }
+
+        // Restart game with R key
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            InitGame();
+        }
     }
 
     // Slides 24-31: link this function to the On Click () event of every button.
@@ -68,6 +101,13 @@ public class GameController : MonoBehaviour
     {
         if (buttonObject == null)
         {
+            return;
+        }
+
+        // Stop accepting input if 5 rounds are reached or game is over
+        if (isGameOver || currentRound >= maxRounds)
+        {
+            Debug.Log("Game has ended. Maximum rounds reached.");
             return;
         }
 
@@ -92,6 +132,9 @@ public class GameController : MonoBehaviour
 
     private void CheckResult(int yourResult)
     {
+        currentRound++;
+        Debug.Log($"Round {currentRound}/{maxRounds} - Your result is: " + yourResult);
+
         // TODO (slide 33): game logic
         // 1. com = random number 1..3  ->  UnityEngine.Random.Range(1, 4)
         // 2. k = you - com
@@ -99,26 +142,68 @@ public class GameController : MonoBehaviour
         //    k == 1 or k == -2   -> "You win."       (cntYou++)
         //    otherwise           -> "Computer win."  (cntCom++)
         // 4. call SetResult(yourResult, comResult)
-        Debug.Log("Your result is: " + yourResult);
-
         int comResult = Random.Range(1, 4);
         int difference = yourResult - comResult;
+        string roundOutcome = "";
+
         if (difference == 0)
         {
-            txtResult.text = "Draw.";
+            roundOutcome = "Draw.";
         }
         else if (difference == 1 || difference == -2)
         {
-            txtResult.text = "You win.";
+            roundOutcome = "You win.";
             cntYou++;
         }
         else
         {
-            txtResult.text = "Computer win.";
+            roundOutcome = "Computer win.";
             cntCom++;
         }
 
         SetResult(yourResult, comResult);
+
+        // Check if the 5th round has been reached to stop the game
+        if (currentRound >= maxRounds)
+        {
+            isGameOver = true;
+            SetButtonsInteractable(false);
+
+            string finalWinner;
+            if (cntYou > cntCom)
+            {
+                finalWinner = "Game Over! You win!";
+            }
+            else if (cntCom > cntYou)
+            {
+                finalWinner = "Game Over! Computer wins!";
+            }
+            else
+            {
+                finalWinner = "Game Over! Draw!";
+            }
+
+            txtResult.text = $"Round {currentRound}/{maxRounds}: {roundOutcome} {finalWinner}";
+            Debug.Log($"Game stopped after {maxRounds} rounds. {finalWinner}");
+        }
+        else
+        {
+            txtResult.text = $"Round {currentRound}/{maxRounds}: {roundOutcome}";
+        }
+    }
+
+    private void SetButtonsInteractable(bool interactable)
+    {
+        if (choiceButtons != null)
+        {
+            foreach (Button btn in choiceButtons)
+            {
+                if (btn != null)
+                {
+                    btn.interactable = interactable;
+                }
+            }
+        }
     }
 
     private void SetResult(int you, int com)
